@@ -210,13 +210,12 @@ def generate_datasets(seed, model_name, tags, metric, negative_tags, test_size):
                 negative_query_embs = load_from_npy(
                     model_name, "queries", [negative_tag]
                 )
-                negative_pcas = load_from_npy(model_name, "pca", [negative_tag])
 
                 logger.info(
                     f"Creating negative features for {tag} with tag {negative_tag}...."
                 )
                 negative_temp_data = create_features(
-                    negative_query_embs[0], negative_pcas[0], metric
+                    negative_query_embs[0], pca, metric
                 )
 
                 negative_data.append(negative_temp_data)
