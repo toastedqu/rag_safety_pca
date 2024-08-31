@@ -37,7 +37,7 @@ def generate_embeddings(seed, model_name, dataset, tags):
     :param model_name: str model name
     :param dataset: str dataset name. choose from stackexchange, local, msmarco
     :param tags: str dataset tags (comma separated).
-            for local dataset both datasets (covid, drugs) are loaded
+            for local dataset choose tags between (covid, drugs, 4chan)
             for stackexchange dataset choose tags between ("history", "crypto", "chess", "cooking", "astronomy",
             "fitness", "anime", "literature")
             for msmarco dataset choose tags between ("biomedical", "music", "film", "finance", "law", "computing")
@@ -338,6 +338,7 @@ def search_hyperparameters(seed, model_name, radiuses, methods, tags, metric):
     "--methods", help="method to use (comma separated)", type=str, default="all"
 )
 @click.option("--tags", help="dataset tags (comma separated)", type=str, default="all")
+@click.option("--test_tags", help="dataset tags as test set (comma separated)", type=str, default="none")
 @click.option("--metric", help="metric to use", type=str, default="proj")
 @click.option(
     "--radius", help="radius to search for eball and ecube", type=float, default=0.01
@@ -346,7 +347,7 @@ def search_hyperparameters(seed, model_name, radiuses, methods, tags, metric):
 @click.option("--width", help="width for erect", type=float, default=0.01)
 @click.option("--n_pcas", help="number of principal components", type=int, default=5)
 def train_and_evaluate(
-    seed, model_name, methods, tags, metric, radius, length, width, n_pcas
+    seed, model_name, methods, tags, test_tags, metric, radius, length, width, n_pcas
 ):
     """
     Train and evaluate classifiers per use case, without hyperparameter tuning
@@ -354,6 +355,7 @@ def train_and_evaluate(
     :param model_name: str model name
     :param methods: str methods to use (comma separated)
     :param tags: str dataset tags (comma separated) to train and evaluate classifiers for
+    :param test_tags: str dataset tags as test set (comma separated) to test classifiers for
     :param metric: str metric to use
     :param radius: float radius to search for eball and ecube
     :param length: float length for erect
@@ -392,15 +394,58 @@ def train_and_evaluate(
     X_train = load_from_npy(model_name, f"X_train_{metric}", tags)
     y_train = load_from_npy(model_name, f"y_train_{metric}", tags)
 
-    X_test = load_from_npy(model_name, f"X_test_{metric}", tags)
-    y_test = load_from_npy(model_name, f"y_test_{metric}", tags)
-
     logger.info(f"Loading PCA components from npy files....")
     pcas = load_from_npy(model_name, "pca", tags)
 
-    for tag, X_tr, y_tr, X_te, y_te, pca in zip(
-        tags, X_train, y_train, X_test, y_test, pcas
+    if test_tags == "all":
+        test_tags = [
+            "covid",
+            "drugs",
+            "biomedical",
+            "music",
+            "film",
+            "finance",
+            "law",
+            "computing",
+            "history",
+            "crypto",
+            "chess",
+            "cooking",
+            "astronomy",
+            "fitness",
+            "anime",
+            "literature",
+        ]
+
+    else:
+        test_tags = test_tags.split(",")
+
+    for tag, X_tr, y_tr, pca in zip(
+        tags, X_train, y_train, pcas
     ):
+
+        if "none" in test_tags:
+            X_test = load_from_npy(model_name, f"X_test_{metric}", tags)[0]
+            y_test = load_from_npy(model_name, f"y_test_{metric}", tags)[0]
+
+        else:
+            test_data = []
+            for test_tag in test_tags:
+                test_query_embs = load_from_npy(
+                    model_name, "queries", [test_tag]
+                )
+
+                logger.info(
+                    f"Creating test features with tag {test_tag}...."
+                )
+                test_temp_data = create_features(
+                    test_query_embs[0], pca, metric
+                )
+
+                test_data.append(test_temp_data)
+            X_test = np.concatenate(test_data).squeeze()
+            y_test = [0] * len(X_test)
+
         trainer = Trainer(classifiers, parameters)
 
         for method in methods:
@@ -417,7 +462,7 @@ def train_and_evaluate(
             )
 
             logger.info(f"Evaluating classifier for tag {tag} and method {method}....")
-            score = trainer.evaluate(X_te[:, [x for x in range(n_pcas)]], y_te, clf=clf)
+            score = trainer.evaluate(X_test[:, [x for x in range(n_pcas)]], y_test, clf=clf)
 
             logger.info(f"Test Accuracy for tag {tag} and method {method} is {score}")
 
