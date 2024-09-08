@@ -64,6 +64,10 @@ def generate_embeddings(seed, model_name, dataset, tags):
     save_to_npy(queries_embs, model_name, "queries", tags)
     save_to_npy(docs_embs, model_name, "docs", tags)
 
+    with open(f"cache/covid_queries.txt", "w") as f:
+        for item in queries[0]:
+            f.write(f"{item}\n")
+
 
 @cli.command("generate_pcas")
 @click.option("--seed", help="seed for reproducibility", type=int, default=2)

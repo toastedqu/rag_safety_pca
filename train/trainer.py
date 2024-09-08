@@ -2,7 +2,7 @@ import logging
 import sys
 
 import numpy as np
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from sklearn.model_selection import train_test_split
 
 logger = logging.Logger(__name__)
@@ -179,6 +179,36 @@ class Trainer:
 
         y_pred = clf.predict(X_test)
         score = accuracy_score(y_pred, y_test)
+
+        recall = recall_score(y_pred, y_test)
+        precision = precision_score(y_pred, y_test)
+        f1score = f1_score(y_pred, y_test)
+
+        logger.info(f"Recall: {round(recall, 3)}")
+        logger.info(f"Precision: {round(precision, 3)}")
+        logger.info(f"F1 Score: {round(f1score, 3)}")
+
+        y_pred_proba = clf.predict_proba(X_test)
+        queries = []
+
+
+        i = 0
+        with open("cache/test_queries.txt", 'r') as file:
+            for line, prob in zip(file, y_pred_proba):
+                if i < 103:
+                    queries.append((line.strip(), prob[1]))
+                i += 1
+
+        sorted_queries = sorted(queries, key=lambda x: x[1], reverse=True)
+        print("Cases that have possibility 1 to be in that class")
+        for i in sorted_queries[:5]:
+            print(i[0], "\t", i[1])
+
+        print("-------------------------------------------------")
+
+        print("Cases that have possibility 0 to be in that class")
+        for i in sorted_queries[-15:]:
+            print(i[0], "\t", i[1])
 
         # clustering methods don't have access to the class labels, so an accuracy lower than 0.5 indicates label flip.
         if score < 0.5:
