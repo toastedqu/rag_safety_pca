@@ -12,7 +12,7 @@ from model.loader import ModelLoader
 from model.pca import PCAClassifier
 from train.trainer import Trainer
 from train.utils import find_best_hyperparameters
-from utils import set_seed, save_to_npy, load_from_npy, save_text_file
+from utils import set_seed, save_to_npy, load_from_npy, save_text_file, plot_pcas, plot_accuracies
 
 logger = logging.Logger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -465,6 +465,131 @@ def train_and_evaluate(
             score = trainer.evaluate(X_test[:, [x for x in range(n_pcas)]], y_test, clf=clf)
 
             logger.info(f"Test Accuracy for tag {tag} and method {method} is {score}")
+
+
+@cli.command("generate_pca_plot")
+@click.option("--seed", help="seed for reproducibility", type=int, default=2)
+@click.option("--model_name", help="model name", type=str, default="all-mpnet-base-v2")
+@click.option("--main_dataset", help="main dataset for pca plot", type=str, default="covid")
+@click.option(
+    "--rest_datasets",
+    help="rest datasets to plot",
+    type=str,
+    default="all",
+)
+@click.option("--metric", help="metric to use", type=str, default="proj")
+def generate_pca_plot(seed, model_name, main_dataset, metric, rest_datasets):
+    """
+    Generate datasets for training and testing
+    :param seed: int seed for reproducibility
+    :param model_name: str model name
+    :param main_dataset: str main_dataset to generate pca plot
+    :param metric: str metric to use. choose from (proj, dist)
+    :param rest_datasets: str rest_datasets to create pca plots (comma separated).
+
+    It will generate pca plots
+    """
+    set_seed(seed)
+
+    if rest_datasets == "all":
+        rest_datasets = [
+            "covid",
+            "drugs",
+            "4chan",
+            "llmattack",
+            "biomedical",
+            "music",
+            "film",
+            "finance",
+            "law",
+            "computing",
+            "history",
+            "crypto",
+            "chess",
+            "cooking",
+            "astronomy",
+            "fitness",
+            "anime",
+            "literature",
+        ].remove(main_dataset)
+    else:
+        rest_datasets = rest_datasets.split(",")
+
+    logger.info(f"Loading embeddings from npy files....")
+    query_embs = load_from_npy(model_name, "queries", [main_dataset])
+
+    logger.info(f"Loading PCA components from npy files....")
+    pcas = load_from_npy(model_name, "pca", [main_dataset])
+
+    logger.info(f"Creating positive features for {main_dataset}....")
+    data = create_features(query_embs[0], pcas[0], metric)
+
+    total_data = []
+    total_data.append(data)
+
+    for tag in rest_datasets:
+        logger.info(f"Loading embeddings from npy files....")
+        query_embs = load_from_npy(model_name, "queries", [tag])
+
+        logger.info(f"Creating positive features for {tag}....")
+        data = create_features(query_embs[0], pcas[0], metric)[:515]
+        total_data.append(data)
+
+    plot_pcas(total_data, [main_dataset] + rest_datasets)
+
+
+@cli.command("generate_acc_plot")
+@click.option("--seed", help="seed for reproducibility", type=int, default=2)
+@click.option("--model_name", help="model name", type=str, default="all-mpnet-base-v2")
+@click.option("--dataset_to_plot", help="dataset to plot", type=str, default="covid")
+@click.option(
+    "--average",
+    help="if average of datasets to be plotted",
+    type=bool,
+    default=False,
+)
+@click.option("--metric", help="metric to use", type=str, default="proj")
+@click.option("--radius_eball", help="radius to search for eball", type=str, default=0.01)
+@click.option("--radius_ecube", help="radius to search for ecube", type=str, default=0.01)
+def generate_acc_plot(seed, model_name, dataset_to_plot, average, metric, radius_eball, radius_ecube):
+    """
+    Generate datasets for training and testing
+    :param seed: int seed for reproducibility
+    :param model_name: str model name
+    :param dataset_to_plot: str dataset (comma separated) to generate plots
+    :param metric: str metric to use. choose from (proj, dist)
+    :param average: bool if average is plotted
+    :param radius_eball: float radius to search for eball
+    :param radius_ecube: float radius to search for ecube
+
+    It will generate accuracy plots vs #pcas
+    """
+    set_seed(seed)
+
+    if dataset_to_plot == "all":
+        dataset_to_plot = [
+            "covid",
+            "drugs",
+            "biomedical",
+            "music",
+            "film",
+            "finance",
+            "law",
+            "computing",
+            "history",
+            "crypto",
+            "chess",
+            "cooking",
+            "astronomy",
+            "fitness",
+            "anime",
+            "literature",
+        ]
+    else:
+        dataset_to_plot = dataset_to_plot.split(",")
+
+    plot_accuracies(dataset_to_plot, average, model_name, metric, radius_eball, radius_ecube)
+
 
 
 if __name__ == "__main__":
