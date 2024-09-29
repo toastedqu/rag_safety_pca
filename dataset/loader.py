@@ -24,6 +24,9 @@ def load_local(id: str) -> List[pd.DataFrame]:
     if id == "4chan":
         return [pd.read_csv(r"data/4chan_attack.csv", header=None)]
 
+    if id == "llmattack":
+        return [pd.read_csv(r"data/llm_attack_dataset.csv").drop_duplicates()]
+
     raise ValueError("Invalid dataset id")
 
 
@@ -90,7 +93,7 @@ def load_queries_docs(
     """
     if dataset == "local":
         if tags == "all":
-            tags = ["covid", "drugs"]
+            tags = ["covid", "drugs", "llmattack", "4chan"]
         else:
             tags = tags.split(",")
 
@@ -101,14 +104,19 @@ def load_queries_docs(
 
             if tag == "covid":
                 queries.append(dfs[0]["user_kp"].tolist())
-                docs.append(dfs[0]["system_kp"].tolist())
+                docs.append(dfs[0]["system_response"].tolist())
 
             if tag == "drugs":
+                dfs[0] = dfs[0][dfs[0]["secondary intent"] != "Covid"]
                 queries.append(dfs[0]["question"].tolist())
                 docs.append(dfs[0]["relevant answer"].tolist())
 
             if tag == "4chan":
                 queries.append(dfs[0][0].tolist())
+                docs.append([""])
+
+            if tag == "llmattack":
+                queries.append(dfs[0]["Query"].tolist())
                 docs.append([""])
 
         return queries, docs, tags
