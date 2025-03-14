@@ -131,7 +131,8 @@ def generate_pcas(seed, model_name, tags):
 )
 @click.option("--metric", help="metric to use", type=str, default="proj")
 @click.option("--test_size", help="test size", type=float, default=0.2)
-def generate_datasets(seed, model_name, tags, metric, negative_tags, test_size):
+@click.option("--criterion", help="criterion to use", type=str, default="p_values")
+def generate_datasets(seed, model_name, tags, metric, negative_tags, test_size, criterion):
     """
     Generate datasets for training and testing
     :param seed: int seed for reproducibility
@@ -223,7 +224,7 @@ def generate_datasets(seed, model_name, tags, metric, negative_tags, test_size):
 
         logger.info(f"Creating data sets for {tag}....")
         X_train, X_test, y_train, y_test, inds = create_sets(
-            data, np.concatenate(negative_data), test_size, seed
+            data, np.concatenate(negative_data), criterion, test_size, seed
         )
         X_trains.append(X_train)
         X_tests.append(X_test)

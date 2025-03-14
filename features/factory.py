@@ -33,7 +33,7 @@ def create_features(a: np.ndarray, b: np.ndarray, metric: str) -> np.ndarray:
 
 
 def create_sets(
-    positive: np.ndarray, negative: np.ndarray, train_test_split=0.2, seed=42
+    positive: np.ndarray, negative: np.ndarray, criterion="EVR", train_test_split=0.2, seed=42
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:
     """
     It creates the train and test sets
@@ -56,15 +56,16 @@ def create_sets(
     negative_train = negative[: int(len(negative) * (1 - train_test_split))]
     negative_test = negative[int(len(negative) * (1 - train_test_split)) :]
 
-    p_values_train = significance_test(positive_train[:len(negative_train)], negative_train[:len(positive_train)])
+    if criterion == "p_values":
+        p_values_train = significance_test(positive_train[:len(negative_train)], negative_train[:len(positive_train)])
 
-    indices = np.argsort(p_values_train)
+        indices = np.argsort(p_values_train)
 
-    positive_train = positive_train[:, indices]
-    negative_train = negative_train[:, indices]
+        positive_train = positive_train[:, indices]
+        negative_train = negative_train[:, indices]
 
-    positive_test = positive_test[:, indices]
-    negative_test = negative_test[:, indices]
+        positive_test = positive_test[:, indices]
+        negative_test = negative_test[:, indices]
 
     y_train = [1] * len(positive_train) + [0] * len(negative_train)
     y_test = [1] * len(positive_test) + [0] * len(negative_test)
