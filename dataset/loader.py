@@ -14,7 +14,7 @@ def load_local(id: str) -> List[pd.DataFrame]:
     if id == "covid":
         return [
             pd.read_csv(r"data/response_db.csv", encoding="unicode_escape")
-            .drop_duplicates(["user_kp", "system_kp"])
+            .drop_duplicates(["user_kp", "system_response"])
             .reset_index(drop=True)
         ]
 
@@ -26,6 +26,13 @@ def load_local(id: str) -> List[pd.DataFrame]:
 
     if id == "llmattack":
         return [pd.read_csv(r"data/llm_attack_dataset.csv").drop_duplicates()]
+
+    if id == "llmattack-drugs":
+        x = pd.read_csv(r"data/llm_attack_substance_use.csv").drop_duplicates()
+        return [x]
+
+    if id == "dataset_to_eval":
+        return [pd.read_csv(r"test_dataset.csv").drop_duplicates()]
 
     raise ValueError("Invalid dataset id")
 
@@ -56,9 +63,9 @@ def load_msmarco(id: str) -> pd.DataFrame:
     """
     return pd.concat(
         [
-            json_to_df(rf"data\msmarco\squad.{id}.train.json"),
-            json_to_df(rf"data\msmarco\squad.{id}.dev.json"),
-            json_to_df(rf"data\msmarco\squad.{id}.test.json"),
+            json_to_df(rf"data/msmarco/squad.{id}.train.json"),
+            json_to_df(rf"data/msmarco/squad.{id}.dev.json"),
+            json_to_df(rf"data/msmarco/squad.{id}.test.json"),
         ]
     ).reset_index(drop=True)
 
@@ -93,7 +100,7 @@ def load_queries_docs(
     """
     if dataset == "local":
         if tags == "all":
-            tags = ["covid", "drugs", "llmattack", "4chan"]
+            tags = ["covid", "drugs", "llmattack", "4chan", "llmattack-drugs", "dataset_to_eval"]
         else:
             tags = tags.split(",")
 
@@ -117,6 +124,14 @@ def load_queries_docs(
 
             if tag == "llmattack":
                 queries.append(dfs[0]["Query"].tolist())
+                docs.append([""])
+
+            if tag == "llmattack-drugs":
+                queries.append(dfs[0]["Query"].tolist())
+                docs.append([""])
+
+            if tag == "dataset_to_eval":
+                queries.append(dfs[0]["rephrased_query"].tolist())
                 docs.append([""])
 
         return queries, docs, tags
