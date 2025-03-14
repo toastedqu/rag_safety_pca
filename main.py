@@ -12,7 +12,8 @@ from model.loader import ModelLoader
 from model.pca import PCAClassifier
 from train.trainer import Trainer
 from train.utils import find_best_hyperparameters
-from utils import set_seed, save_to_npy, load_from_npy, save_text_file, plot_pcas, plot_accuracies
+from utils import set_seed, save_to_npy, load_from_npy, save_text_file, plot_pcas, plot_accuracies, save_to_txt, \
+    load_text_file
 
 logger = logging.Logger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -221,13 +222,14 @@ def generate_datasets(seed, model_name, tags, metric, negative_tags, test_size):
                 negative_data.append(negative_temp_data)
 
         logger.info(f"Creating data sets for {tag}....")
-        X_train, X_test, y_train, y_test = create_sets(
+        X_train, X_test, y_train, y_test, inds = create_sets(
             data, np.concatenate(negative_data), test_size, seed
         )
         X_trains.append(X_train)
         X_tests.append(X_test)
         y_trains.append(y_train)
         y_tests.append(y_test)
+        save_to_txt(inds, tag, f"{model_name}")
 
     logger.info(f"Saving datasets to npy files ....")
     save_to_npy(X_trains, model_name, f"X_train_{metric}", tags)
@@ -320,7 +322,7 @@ def search_hyperparameters(seed, model_name, radiuses, methods, tags, metric):
 
             logger.info("Training best classifier....")
             clf = trainer.train(
-                method, X_tr[:, [x for x in range(best_params[-1])]], y_tr, best_params
+                method, X_tr[:, [x for x in range(best_params[-1])]], y_tr, best_params[:-1] if len(best_params) > 2 else best_params
             )
 
             logger.info("Evaluating best classifier....")
@@ -328,7 +330,7 @@ def search_hyperparameters(seed, model_name, radiuses, methods, tags, metric):
                 X_te[:, [x for x in range(best_params[-1])]], y_te, clf=clf
             )
 
-            logger.info(f"Test Accuracy for tag {tag} and method {method} is {score}")
+            logger.info(f"Test Accuracy for tag {tag} and method {method} is {round(score, 3)}")
 
 
 @cli.command("train_and_evaluate")
@@ -343,11 +345,12 @@ def search_hyperparameters(seed, model_name, radiuses, methods, tags, metric):
 @click.option(
     "--radius", help="radius to search for eball and ecube", type=float, default=0.01
 )
-@click.option("--length", help="length for erect", type=float, default=0.01)
+@click.option("--length", help="length for erect", type=str, default='0.01')
 @click.option("--width", help="width for erect", type=float, default=0.01)
 @click.option("--n_pcas", help="number of principal components", type=int, default=5)
+@click.option("--best", help="if evaluation on best hyperparameters", type=bool, default=False)
 def train_and_evaluate(
-    seed, model_name, methods, tags, test_tags, metric, radius, length, width, n_pcas
+    seed, model_name, methods, tags, test_tags, metric, radius, length, width, n_pcas, best
 ):
     """
     Train and evaluate classifiers per use case, without hyperparameter tuning
@@ -452,19 +455,39 @@ def train_and_evaluate(
             logger.info(f"Training classifier for tag {tag} and method {method}....")
 
             if method == "erect":
-                params = [length, width]
-                n_pcas = 2
+                params = [float(x) for x in length.split(",")]
             else:
                 params = [radius, n_pcas]
+
+            if best:
+                results = load_text_file(method, tag, model_name, metric)
+                best_params = eval(find_best_hyperparameters(results)[0])
+                logger.info(
+                    f"Best hyperparameters for tag {tag} and method {method} are {best_params}"
+                )
+
+                if not isinstance(best_params, list):
+                    best_params = [best_params]
+
+                n_pcas = best_params[-1]
+                params = best_params[:-1] if len(best_params) > 2 else best_params
+
 
             clf = trainer.train(
                 method, X_tr[:, [x for x in range(n_pcas)]], y_tr, params
             )
 
+            inds = []
+            with open("cache/__indices_pos_covid_neg_modern_bert.txt", "r") as f:
+                for line in f:
+                    inds.append(int(line.strip()))
+
+            X_test = X_test[:, inds]
+
             logger.info(f"Evaluating classifier for tag {tag} and method {method}....")
             score = trainer.evaluate(X_test[:, [x for x in range(n_pcas)]], y_test, clf=clf)
 
-            logger.info(f"Test Accuracy for tag {tag} and method {method} is {score}")
+            logger.info(f"Test Accuracy for tag {tag} and method {method} is {round(score,3)}")
 
 
 @cli.command("generate_pca_plot")
