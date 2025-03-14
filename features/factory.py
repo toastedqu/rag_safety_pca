@@ -1,9 +1,14 @@
 from typing import Tuple
 
 import numpy as np
+import scipy
 from scipy.spatial.distance import euclidean
 from sklearn.utils import shuffle
 
+
+def significance_test(arr1, arr2):
+
+    return [scipy.stats.ttest_ind(arr1[:, i], arr2[:, i]).pvalue for i in range(200)]#len(arr1[0]))]
 
 def create_features(a: np.ndarray, b: np.ndarray, metric: str) -> np.ndarray:
     """
@@ -29,7 +34,7 @@ def create_features(a: np.ndarray, b: np.ndarray, metric: str) -> np.ndarray:
 
 def create_sets(
     positive: np.ndarray, negative: np.ndarray, train_test_split=0.2, seed=42
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:
     """
     It creates the train and test sets
     :param positive: data matrix for positive class
@@ -51,6 +56,16 @@ def create_sets(
     negative_train = negative[: int(len(negative) * (1 - train_test_split))]
     negative_test = negative[int(len(negative) * (1 - train_test_split)) :]
 
+    p_values_train = significance_test(positive_train[:len(negative_train)], negative_train[:len(positive_train)])
+
+    indices = np.argsort(p_values_train)
+
+    positive_train = positive_train[:, indices]
+    negative_train = negative_train[:, indices]
+
+    positive_test = positive_test[:, indices]
+    negative_test = negative_test[:, indices]
+
     y_train = [1] * len(positive_train) + [0] * len(negative_train)
     y_test = [1] * len(positive_test) + [0] * len(negative_test)
 
@@ -60,4 +75,5 @@ def create_sets(
     X_train, y_train = shuffle(X_train, np.array(y_train), random_state=seed)
     X_test, y_test = shuffle(X_test, np.array(y_test), random_state=seed)
 
-    return X_train, X_test, y_train, y_test
+    return X_train, X_test, y_train, y_test, indices
+
