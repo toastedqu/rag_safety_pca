@@ -8,20 +8,35 @@ def set_seed(seed):
 
 def save_to_npy(embeddings, model, information, tags):
     for tag, d_emb in zip(tags, embeddings):
-        np.save(fr"cache/{information}_{model}_{tag}.npy", d_emb)
+        np.save(fr"cache/{information}_{model.replace('/', '__')}_{tag}.npy", d_emb)
 
 
 def load_from_npy(model, information, tags):
     embeddings = []
     for tag in tags:
-        embeddings.append(np.load(fr"cache/{information}_{model}_{tag}.npy"))
+        embeddings.append(np.load(fr"cache/{information}_{model.replace('/', '__')}_{tag}.npy"))
     return embeddings
 
 
+def save_to_txt(indices, tags, negative_tags):
+    with open(f"cache/__indices_pos_{tags}_neg_{negative_tags}.txt", "w") as f:
+        for item in indices:
+            f.write(f"{item}\n")
+
+
 def save_text_file(data, method, tag, model_name: str, metric: str):
-    with open(f"cache/{method}_{tag}_{model_name}_{metric}.txt", "w") as f:
+    with open(f"cache/results_high_p_{method}_{tag}_{model_name.replace('/', '__')}_{metric}.txt", "w") as f:
         for item, value in data.items():
             f.write(f"{item}\t{value}\n")
+
+
+def load_text_file(method, tag, model_name: str, metric: str):
+    data = {}
+    with open(f"cache/{method}_{tag}_{model_name}_{metric}.txt", "r") as f:
+        for line in f:
+            parts = line.strip().split('\t')
+            data[parts[0]] = float(parts[1])
+    return data
 
 
 def plot_pcas(datasets: list, datasets_names):
@@ -33,10 +48,9 @@ def plot_pcas(datasets: list, datasets_names):
     for data, color in zip(datasets, colors):
         plt.scatter(data[:, 0], data[:, 1], color=color, alpha=0.5)
 
-    plt.title('PCA Plot for Multiple Datasets')
-    plt.xlabel('Principal Component 1')
-    plt.ylabel('Principal Component 2')
-    plt.legend([name for name in datasets_names])
+    plt.xlabel('Principal Component 1', fontsize=17)
+    plt.ylabel('Principal Component 2', fontsize=17)
+    plt.legend([name for name in datasets_names], fontsize=17)
     plt.grid(True)
     plt.show()
 
