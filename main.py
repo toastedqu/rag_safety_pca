@@ -1,3 +1,4 @@
+import importlib
 import logging
 import sys
 
@@ -922,6 +923,39 @@ def generate_acc_plot(
     plot_accuracies(
         dataset_to_plot, average, model_name, metric, radius_eball, radius_ecube
     )
+
+
+@cli.command("ask_llm")
+@click.option("--task", help="task to perform", type=str, default="rephrase_su")
+@click.option("--seed", help="seed for reproducibility", type=int, default=2)
+@click.option("--required_files", help="required files (comma separated)", type=str, default="")
+@click.option("--model_name", help="model name", type=str, default="gpt-4o")
+@click.option("--output_file", help="output file", type=str, default="output.csv")
+def ask_llm(task, seed, required_files, model_name, output_file):
+    """
+    Ask LLM for a specific task
+    :param task: str task to perform. choose from (rephrase, classify, generate)
+    :param seed: int seed for reproducibility
+    :param prompts_folder: str prompts folder
+    :param required_files: str required files (comma separated)
+
+    It will ask the LLM for a specific task
+    """
+    set_seed(seed)
+
+    if required_files:
+        required_files = required_files.split(",")
+
+    module = importlib.import_module(f"prompts.{task}")
+    system_prompt = getattr(module, "system_prompt")
+    user_prompt = getattr(module, "user_prompt")
+
+    llm_function = importlib.import_module(f"llm.{task}")
+    output_llm = getattr(llm_function, "output_llm")
+
+    responses = output_llm(required_files, system_prompt, user_prompt, model_name)
+
+    responses.to_csv(output_file)
 
 
 if __name__ == "__main__":
