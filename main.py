@@ -624,6 +624,14 @@ def train_and_evaluate(
             X_test = np.concatenate(test_data).squeeze()
             y_test = [0] * len(X_test)
 
+            if ind_set:
+                inds = []
+                with open(ind_set, "r") as f:
+                    for line in f:
+                        inds.append(int(line.strip()))
+
+                X_test = X_test[:, inds]
+
         trainer = Trainer(classifiers, parameters)
 
         for method in methods:
@@ -650,14 +658,6 @@ def train_and_evaluate(
             clf = trainer.train(
                 method, X_tr[:, [x for x in range(n_pcas)]], y_tr, params
             )
-
-            if ind_set:
-                inds = []
-                with open(ind_set, "r") as f:
-                    for line in f:
-                        inds.append(int(line.strip()))
-
-                X_test = X_test[:, inds]
 
             logger.info(f"Evaluating classifier for tag {tag} and method {method}....")
             score = trainer.evaluate(
