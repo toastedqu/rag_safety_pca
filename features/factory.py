@@ -46,6 +46,7 @@ def create_sets(
         X_test: test data matrix
         y_train: train labels
         y_test: test labels
+        indices: indices of the features
     """
     positive = shuffle(positive.squeeze())[: len(negative)]
     negative = shuffle(negative.squeeze())[: len(positive)]
@@ -78,3 +79,42 @@ def create_sets(
 
     return X_train, X_test, y_train, y_test, indices
 
+
+def create_kb(
+    positive: np.ndarray, negative: np.ndarray, criterion="EVR", train_test_split=0.2, seed=42, consider_negative=False
+) -> Tuple[np.ndarray, np.ndarray, list]:
+    """
+    It creates the train set
+    :param positive: data matrix for positive class
+    :param negative: data matrix for negative class
+    :param train_test_split: ratio of train and test split
+    :param seed: random seed
+    :param consider_negative: consider negative class for the building of kb
+    :return:
+        X: train data matrix
+        y: train labels
+        indices: indices of the features
+    """
+    positive = shuffle(positive.squeeze())
+    negative = shuffle(negative.squeeze())[: len(positive)]
+
+    if criterion == "p_values":
+        p_values_train = significance_test(positive[:len(negative)], negative[:len(positive)])
+
+        indices = np.argsort(p_values_train)
+
+        positive = positive[:, indices]
+        negative = negative[:, indices]
+    else:
+        indices = []
+
+    if consider_negative:
+        y = [1] * len(positive) + [0] * len(negative)
+        X = np.concatenate((positive, negative))
+    else:
+        y = [1] * len(positive)
+        X = positive
+
+    X, y = shuffle(X, np.array(y), random_state=seed)
+
+    return X, y, indices

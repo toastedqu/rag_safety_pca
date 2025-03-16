@@ -8,13 +8,15 @@ def set_seed(seed):
 
 def save_to_npy(embeddings, model, information, tags):
     for tag, d_emb in zip(tags, embeddings):
-        np.save(fr"cache/{information}_{model.replace('/', '__')}_{tag}.npy", d_emb)
+        np.save(rf"cache/{information}_{model.replace('/', '__')}_{tag}.npy", d_emb)
 
 
 def load_from_npy(model, information, tags):
     embeddings = []
     for tag in tags:
-        embeddings.append(np.load(fr"cache/{information}_{model.replace('/', '__')}_{tag}.npy"))
+        embeddings.append(
+            np.load(rf"cache/{information}_{model.replace('/', '__')}_{tag}.npy")
+        )
     return embeddings
 
 
@@ -25,7 +27,10 @@ def save_to_txt(indices, tags, negative_tags):
 
 
 def save_text_file(data, method, tag, model_name: str, metric: str):
-    with open(f"cache/results_high_p_{method}_{tag}_{model_name.replace('/', '__')}_{metric}.txt", "w") as f:
+    with open(
+        f"cache/results_high_p_{method}_{tag}_{model_name.replace('/', '__')}_{metric}.txt",
+        "w",
+    ) as f:
         for item, value in data.items():
             f.write(f"{item}\t{value}\n")
 
@@ -34,7 +39,7 @@ def load_text_file(method, tag, model_name: str, metric: str):
     data = {}
     with open(f"cache/{method}_{tag}_{model_name}_{metric}.txt", "r") as f:
         for line in f:
-            parts = line.strip().split('\t')
+            parts = line.strip().split("\t")
             data[parts[0]] = float(parts[1])
     return data
 
@@ -48,28 +53,45 @@ def plot_pcas(datasets: list, datasets_names):
     for data, color in zip(datasets, colors):
         plt.scatter(data[:, 0], data[:, 1], color=color, alpha=0.5)
 
-    plt.xlabel('Principal Component 1', fontsize=17)
-    plt.ylabel('Principal Component 2', fontsize=17)
+    plt.xlabel("Principal Component 1", fontsize=17)
+    plt.ylabel("Principal Component 2", fontsize=17)
     plt.legend([name for name in datasets_names], fontsize=17)
     plt.grid(True)
     plt.show()
 
 
-def plot_accuracies(datasets: list, average: bool, model: str, metric: str, radius_eball: float, radius_ecube: float):
+def plot_accuracies(
+    datasets: list,
+    average: bool,
+    model: str,
+    metric: str,
+    radius_eball: float,
+    radius_ecube: float,
+):
 
-    datasets_filenames_eball = [f"cache/eball_{dataset}_{model}_{metric}.txt" for dataset in datasets]
-    datasets_filenames_ecube = [f"cache/ecube_{dataset}_{model}_{metric}.txt" for dataset in datasets]
-    datasets_filenames_logreg = [f"cache/logreg_{dataset}_{model}_{metric}.txt" for dataset in datasets]
-    datasets_filenames_svm = [f"cache/svm_{dataset}_{model}_{metric}.txt" for dataset in datasets]
-    datasets_filenames_gmm = [f"cache/gmm_{dataset}_{model}_{metric}.txt" for dataset in datasets]
+    datasets_filenames_eball = [
+        f"cache/eball_{dataset}_{model}_{metric}.txt" for dataset in datasets
+    ]
+    datasets_filenames_ecube = [
+        f"cache/ecube_{dataset}_{model}_{metric}.txt" for dataset in datasets
+    ]
+    datasets_filenames_logreg = [
+        f"cache/logreg_{dataset}_{model}_{metric}.txt" for dataset in datasets
+    ]
+    datasets_filenames_svm = [
+        f"cache/svm_{dataset}_{model}_{metric}.txt" for dataset in datasets
+    ]
+    datasets_filenames_gmm = [
+        f"cache/gmm_{dataset}_{model}_{metric}.txt" for dataset in datasets
+    ]
 
     data_eball = {}
 
     for i, file_path in enumerate(datasets_filenames_eball):
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             for line in file:
                 # Parse the line
-                parts = line.strip().split('\t')
+                parts = line.strip().split("\t")
                 xy, z = parts[0], float(parts[1])
                 x, y = eval(xy)
 
@@ -89,10 +111,10 @@ def plot_accuracies(datasets: list, average: bool, model: str, metric: str, radi
     data_ecube = {}
 
     for i, file_path in enumerate(datasets_filenames_ecube):
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             for line in file:
                 # Parse the line
-                parts = line.strip().split('\t')
+                parts = line.strip().split("\t")
                 xy, z = parts[0], float(parts[1])
                 x, y = eval(xy)
 
@@ -112,10 +134,10 @@ def plot_accuracies(datasets: list, average: bool, model: str, metric: str, radi
     data_logreg = {}
 
     for file_path in datasets_filenames_logreg:
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             for line in file:
                 # Parse the line
-                parts = line.strip().split('\t')
+                parts = line.strip().split("\t")
                 y, z = parts[0], float(parts[1])
 
                 if y not in data_logreg:
@@ -125,10 +147,10 @@ def plot_accuracies(datasets: list, average: bool, model: str, metric: str, radi
     data_svm = {}
 
     for file_path in datasets_filenames_svm:
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             for line in file:
                 # Parse the line
-                parts = line.strip().split('\t')
+                parts = line.strip().split("\t")
                 y, z = parts[0], float(parts[1])
 
                 if y not in data_svm:
@@ -138,10 +160,10 @@ def plot_accuracies(datasets: list, average: bool, model: str, metric: str, radi
     data_gmm = {}
 
     for file_path in datasets_filenames_gmm:
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             for line in file:
                 # Parse the line
-                parts = line.strip().split('\t')
+                parts = line.strip().split("\t")
                 y, z = parts[0], float(parts[1])
 
                 if y not in data_gmm:
@@ -157,29 +179,100 @@ def plot_accuracies(datasets: list, average: bool, model: str, metric: str, radi
         averages_logreg = {y: np.mean(zs) for y, zs in data_logreg.items()}
         averages_svm = {y: np.mean(zs) for y, zs in data_svm.items()}
         averages_gmm = {y: np.mean(zs) for y, zs in data_gmm.items()}
-        plt.plot(list(averages_eball.keys())[:9], list(averages_eball.values())[:9], marker='o', label='eball')
-        plt.plot(list(averages_ecube.keys())[:9], list(averages_ecube.values())[:9], marker='o', label='ecube')
-        plt.plot(list(averages_logreg.keys()), list(averages_logreg.values()), marker='o', label='logreg')
-        plt.plot(list(averages_svm.keys()), list(averages_svm.values()), marker='o', label='svm')
-        plt.plot(list(averages_gmm.keys()), list(averages_gmm.values()), marker='o', label='gmm')
+        plt.plot(
+            list(averages_eball.keys())[:9],
+            list(averages_eball.values())[:9],
+            marker="o",
+            label="eball",
+        )
+        plt.plot(
+            list(averages_ecube.keys())[:9],
+            list(averages_ecube.values())[:9],
+            marker="o",
+            label="ecube",
+        )
+        plt.plot(
+            list(averages_logreg.keys()),
+            list(averages_logreg.values()),
+            marker="o",
+            label="logreg",
+        )
+        plt.plot(
+            list(averages_svm.keys()),
+            list(averages_svm.values()),
+            marker="o",
+            label="svm",
+        )
+        plt.plot(
+            list(averages_gmm.keys()),
+            list(averages_gmm.values()),
+            marker="o",
+            label="gmm",
+        )
 
-        plt.title(f'Plot of Average Accuracies for different number of PCAs')
+        plt.title(f"Plot of Average Accuracies for different number of PCAs")
     else:
         averages_eball = {y: zs[0] for y, zs in data_eball.items()}
         averages_ecube = {y: zs[0] for y, zs in data_ecube.items()}
         averages_logreg = {y: zs[0] for y, zs in data_logreg.items()}
         averages_svm = {y: zs[0] for y, zs in data_svm.items()}
         averages_gmm = {y: zs[0] for y, zs in data_gmm.items()}
-        plt.plot(list(averages_eball.keys()), list(averages_eball.values()), marker='o', label='eball')
-        plt.plot(list(averages_ecube.keys()), list(averages_ecube.values()), marker='o', label='ecube')
-        plt.plot(list(averages_logreg.keys()), list(averages_logreg.values()), marker='o', label='logreg')
-        plt.plot(list(averages_svm.keys()), list(averages_svm.values()), marker='o', label='svm')
-        plt.plot(list(averages_gmm.keys()), list(averages_gmm.values()), marker='o', label='gmm')
+        plt.plot(
+            list(averages_eball.keys()),
+            list(averages_eball.values()),
+            marker="o",
+            label="eball",
+        )
+        plt.plot(
+            list(averages_ecube.keys()),
+            list(averages_ecube.values()),
+            marker="o",
+            label="ecube",
+        )
+        plt.plot(
+            list(averages_logreg.keys()),
+            list(averages_logreg.values()),
+            marker="o",
+            label="logreg",
+        )
+        plt.plot(
+            list(averages_svm.keys()),
+            list(averages_svm.values()),
+            marker="o",
+            label="svm",
+        )
+        plt.plot(
+            list(averages_gmm.keys()),
+            list(averages_gmm.values()),
+            marker="o",
+            label="gmm",
+        )
 
-        plt.title(f"Plot of Accuracies for different number of PCAs for dataset {datasets[0]}")
+        plt.title(
+            f"Plot of Accuracies for different number of PCAs for dataset {datasets[0]}"
+        )
 
-    plt.xlabel('# of PCAs')
-    plt.ylabel('Accuracy')
+    plt.xlabel("# of PCAs")
+    plt.ylabel("Accuracy")
     plt.legend()
     plt.grid(True)
+    plt.show()
+
+
+def plot_histograms(clf, X):
+    distances, indices = clf.radius_neighbors(X, return_distance=True)
+
+    distances = [
+        np.min(distance)
+        for distance in distances
+        if distance is not None and len(distance) > 0
+    ]
+
+    bins = np.linspace(0, max(distances), 50)
+
+    plt.figure(figsize=(10, 6))
+    plt.hist(distances, bins=bins, edgecolor="black", alpha=0.7)
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+    plt.title("Distribution of the first neighbor distance")
     plt.show()
