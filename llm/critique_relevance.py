@@ -22,10 +22,10 @@ def output_llm(required_files, system_prompt, user_prompt, model_name):
     responses = []
 
     for q, r in tqdm(zip(queries, answers), total=len(queries)):
-        system_prompt = system_prompt.replace("{question}", q).replace("{answer}", r)
+        new_prompt = system_prompt.replace("{question}", q).replace("{answer}", r)
 
         messages = [
-            {"role": "user", "content": system_prompt},
+            {"role": "user", "content": new_prompt},
         ]
 
         response = client.chat.completions.create(
