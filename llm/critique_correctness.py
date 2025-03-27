@@ -16,12 +16,12 @@ def output_llm(required_files, system_prompt, user_prompt, model_name):
 
     client = OpenAI()
 
-    queries = x["rephrased_query"].tolist()
+    answers = x["response"].tolist()
 
     responses = []
 
-    for q in tqdm(queries, total=len(queries)):
-        new_prompt = system_prompt.replace("{question}", q)
+    for r in tqdm(answers, total=len(answers)):
+        new_prompt = system_prompt.replace("{answer}", r)
 
         messages = [
             {"role": "user", "content": new_prompt},
