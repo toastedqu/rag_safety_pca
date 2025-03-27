@@ -21,7 +21,7 @@ def output_llm(required_files, system_prompt, user_prompt, model_name):
     responses = []
 
     for q in tqdm(queries, total=len(queries)):
-        system_prompt.replace("{question}", q)
+        system_prompt = system_prompt.replace("{question}", q)
 
         messages = [
             {"role": "user", "content": system_prompt},

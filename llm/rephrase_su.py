@@ -27,7 +27,7 @@ def output_llm(required_files, system_prompt, user_prompt, model_name):
     for q in tqdm(questions):
         type_of_re = random.choice(["question", "command-style statement"])
 
-        system_prompt.replace("{query}", q).replace("{type_of_re}", type_of_re)
+        system_prompt = system_prompt.replace("{query}", q).replace("{type_of_re}", type_of_re)
 
         messages = [
             {"role": "user", "content": system_prompt},

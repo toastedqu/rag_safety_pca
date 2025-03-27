@@ -22,7 +22,7 @@ def output_llm(required_files, system_prompt, user_prompt, model_name):
     responses = []
 
     for q, r in tqdm(zip(queries, answers), total=len(queries)):
-        system_prompt.replace("{question}", q).replace("{answer}", r)
+        system_prompt = system_prompt.replace("{question}", q).replace("{answer}", r)
 
         messages = [
             {"role": "user", "content": system_prompt},
@@ -48,6 +48,9 @@ def output_llm(required_files, system_prompt, user_prompt, model_name):
                     score = response
 
         responses.append(score)
+        print(q)
+        print(r)
+        print(score)
 
     x["relevance_score"] = responses
 
