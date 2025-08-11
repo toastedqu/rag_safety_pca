@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from neural_collapse.clustering import Clustering
 from neural_collapse.loader import dataset_loader, load_dataloader
 from neural_collapse.model import BertForFeatureSeparation
+from neural_collapse.predictor import Predictor
 from neural_collapse.trainer import NCTrainer
 from utils import set_seed
 
@@ -112,7 +113,7 @@ def create_datasets(seed, in_domain_path, out_domain_path, test_size):
 @click.option("--alpha", help="weight for the clustering loss", type=float, default=1)
 @click.option("--beta", help="weight for the separation loss", type=float, default=1)
 @click.option("--lambda_oe", help="weight for the out-of-distribution entropy loss", type=float, default=0.5)
-@click.option("--n_epochs", help="number of training epochs", type=int, default=3)
+@click.option("--n_epochs", help="number of training epochs", type=int, default=1)
 @click.option("--output_path", help="path to save the trained model", type=str, default="trained_model.pth")
 def train(seed, data_path, model, batch_size, device, learning_rate, alpha, beta, lambda_oe, n_epochs, output_path):
     """
@@ -149,15 +150,80 @@ def train(seed, data_path, model, batch_size, device, learning_rate, alpha, beta
     logger.info("Initializing model...")
     model = BertForFeatureSeparation(num_classes, model).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-    ood_dataloader = cycle(ood_dataloader)
+    ood_dataloader_cyc = cycle(ood_dataloader)
 
     logger.info("Starting training...")
     trainer = NCTrainer(logger, model, optimizer, alpha=alpha, beta=beta, lambda_oe=lambda_oe, n_epochs=n_epochs, device=device)
-    trainer.train(id_dataloader, ood_dataloader)
+    trainer.train(id_dataloader, ood_dataloader_cyc)
     logger.info("Training completed.")
 
     logger.info("Saving model...")
     torch.save(trainer.model.state_dict(), output_path)
+
+    logger.info("Finding ideal threshold for OOD detection...")
+    predictor = Predictor(model, device)
+    threshold = predictor.find_threshold(id_dataloader, ood_dataloader)
+
+    logger.info(f"Ideal threshold for OOD detection: {threshold}")
+    logger.info("Saving threshold...")
+    pd.Series([threshold]).to_csv("ideal_threshold.csv", index=False)
+
+
+@cli.command("test")
+@click.option("--seed", help="seed for reproducibility", type=int, default=2)
+@click.option("--test_data_path", help="path to test dataset directory", type=str, required=True)
+@click.option("--model_path", help="path to the trained model", type=str, required=True)
+@click.option("--model", help="pretrained BERT model name or path", type=str, default="bert-base-uncased")
+@click.option("--batch_size", help="batch size for testing", type=int, default=32)
+@click.option("--device", help="device to run the testing on (e.g., 'cpu' or 'cuda')", type=str, default="cpu")
+@click.option("--num_classes", help="number of classes in the dataset", type=int, default=2)
+def test(seed, test_data_path, model_path, model, batch_size, device, num_classes):
+    """
+    Test the trained model on a specified test dataset.
+
+    :param seed: Seed for reproducibility.
+    :param test_data_path: Path to the directory containing the test dataset.
+    :param model_path: Path to the trained model file.
+    :param model: Pretrained BERT model name or path.
+    :param batch_size: Batch size for testing.
+    :param device: Device to run the testing on (e.g., 'cpu' or 'cuda').
+    :param num_classes: Number of classes in the dataset.
+    """
+    set_seed(seed)
+
+    logger.info(f"Loading test dataset from {test_data_path}...")
+
+    try:
+        id_test = pd.read_csv(test_data_path + "/id_test.csv")
+        ood_test = pd.read_csv(test_data_path + "/ood_test.csv")
+
+    except:
+        data = pd.read_csv(test_data_path)
+        id_test = data[data["Label"] == 0]
+        ood_test = data[data["Label"] == 1]
+
+    logger.info("Extracting threshold...")
+    threshold = pd.read_csv("ideal_threshold.csv").iloc[0, 0]
+    logger.info(f"Threshold for OOD detection: {threshold}")
+
+    logger.info("Creating dataloaders...")
+    id_dataloader = load_dataloader(id_test, model, batch_size)
+    ood_dataloader = load_dataloader(ood_test, model, batch_size)
+
+    logger.info("Loading model...")
+    model = BertForFeatureSeparation(num_classes, model).to(device)
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
+
+    logger.info("Starting testing...")
+    predictor = Predictor(model, device)
+
+    metrics = predictor.predict(id_dataloader, ood_dataloader, threshold)
+
+    logger.info("Testing completed.")
+    logger.info("Metrics:")
+    for key, value in metrics.items():
+        logger.info(f"{key}: {value}")
 
 
 if __name__ == "__main__":
