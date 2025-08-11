@@ -57,6 +57,8 @@ def create_sets(
     negative_train = negative[: int(len(negative) * (1 - train_test_split))]
     negative_test = negative[int(len(negative) * (1 - train_test_split)) :]
 
+    indices = []
+
     if criterion == "p_values":
         p_values_train = significance_test(positive_train[:len(negative_train)], negative_train[:len(positive_train)])
 
